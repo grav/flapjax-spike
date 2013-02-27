@@ -1,7 +1,8 @@
 (ns flapjax-spike.main
   (:require [flapjax :as fj]
             [goog.dom.classes :as classes]
-            [goog.dom :as dom]))
+            [goog.dom :as dom]
+            [cljs.reader :as reader]))
 
 (defn elm
   "If e is a string it is looked as an id in the dom tree.
@@ -50,36 +51,36 @@
                           :response "plain"})]
     (fj/startsWith (fj/getWebServiceObjectE request) ["No activities"])))
 
+#_(defn myCondB [& pairs]
+  (reduce (fn [test result])))
+
 (defn myCondB [& pairs]
   (let [[test result] (first pairs)]
     (fj/ifB test
             result
-            (if (> (count (rest pairs)) 0)
-              (myCondB (rest pairs))
-              (fj/constantB "Bom")))))
+            (if (= (count (rest pairs)) 0)
+              (fj/constantB "Bom")
+              (myCondB (rest pairs))))))
 
-#_(defn contentB [activeB]
-  (fj/ifB (isActiveB? activeB :frontpage)
-          (fj/constantB "Frontpage")
-          (fj/startsWith
-              (fj/getWebServiceObjectE
-               (fj/oneE (clj->js {:url "/rest/activities"
-                                  :request "get"
-                                  :response "plain"})))
-              "Loading")))
+(defn restB [url]
+  (fj/liftB
+   (fn [s]
+     (reader/read-string s))
+   (fj/startsWith
+    (fj/getWebServiceObjectE
+     (fj/oneE (clj->js {:url url
+                        :request "get"
+                        :response "plain"})))
+    :loading)))
 
 (defn contentB [activeB]
-  (myCondB [ (isActiveB? activeB :frontpage)
-             (fj/constantB "FrontPage")]
-           [ (isActiveB? activeB :counting)
-             (fj/startsWith
-              (fj/getWebServiceObjectE
-               (fj/oneE (clj->js {:url "/rest/activities"
-                                  :request "get"
-                                  :response "plain"})))
-              "Loading")]
+  (fj/ifB (isActiveB? activeB :frontpage)
+          (fj/constantB "Frontpage")
+          (restB "/rest/activities")))
 
-           [ (fj/constantB true) (fj/constantB "Didn't match")]))
+#_(defn contentB [activeB]
+  (fj/condB [(isActiveB? activeB :frontpage) (fj/constantB "Frontpage")]
+            [(isActiveB? activeB :counting) (restB "/rest/activities")]))
 
 (defn menuB [B]
   (fj/liftB

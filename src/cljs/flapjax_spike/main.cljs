@@ -33,6 +33,18 @@
                    "No idea?")]
        (dom/createDom "span" nil value))) B))
 
+(def namesB
+  (fj/constantB ["olga" "otto"]))
+
+(defn namesMenuB [B]
+  (fj/liftB
+   (fn [names]
+     (let [menu (dom/createDom "div")]
+       (doseq [name names]
+         (let [item (dom/createDom "span" (clj->js {:class "menu-item"}) name)]
+           (dom/appendChild menu item)))
+       menu)) B))
+
 (defn ^:export init []
   (let [frontpage-clicksE (fj/clicksE "frontpage-link")
         counting-clicksE (fj/clicksE "counting-link")
@@ -43,4 +55,6 @@
       (fj/insertValueB (activeClassB currentActiveB e)
                        e
                        "className"))
-    (fj/insertDomB (pageB currentActiveB) "content-holder")))
+    (fj/insertDomB (pageB currentActiveB) "content-holder" "beginning")
+
+    (fj/insertDomB (namesMenuB namesB) "name-menu")))

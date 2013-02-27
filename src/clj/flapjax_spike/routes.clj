@@ -22,11 +22,15 @@
 
 (defroutes main-routes
 
-  (GET "/:child/:activity" [child activity]
+  ;; default activities
+  (GET "/rest/activities" []
+       (generate-response ["breast-feed" "nappy-change"]))
+
+  (GET "/rest/:child/:activity" [child activity]
        (generate-response
         (get-in @state [child activity])))
 
-  (POST "/:child/:activity" {{:keys [child activity]} :params
+  (POST "/rest/:child/:activity" {{:keys [child activity]} :params
                              edn-params :edn-params}
         (do
           (swap! state update-state [child activity]

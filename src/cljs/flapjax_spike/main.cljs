@@ -24,6 +24,15 @@
   (fj/liftB (fn [target-elm]
               (if (e= target-elm e) "active" "")) B))
 
+(defn pageB [B]
+  (fj/liftB
+   (fn [e]
+     (let [value (case (.-id e)
+                   "counting-link" "Counting Page"
+                   "frontpage-link" "Front Page"
+                   "No idea?")]
+       (dom/createDom "span" nil value))) B))
+
 (defn ^:export init []
   (let [frontpage-clicksE (fj/clicksE "frontpage-link")
         counting-clicksE (fj/clicksE "counting-link")
@@ -33,4 +42,5 @@
     (doseq [e ["frontpage-link" "counting-link"]]
       (fj/insertValueB (activeClassB currentActiveB e)
                        e
-                       "className"))))
+                       "className"))
+    (fj/insertDomB (pageB currentActiveB) "content-holder")))

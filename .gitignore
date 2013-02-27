@@ -11,3 +11,5 @@ pom.xml.asc
 .lein-plugins
 .lein-repl-history
 main.js
+.lein-cljsbuild-compiler-0/cljs/core.cljs
+.lein-cljsbuild-compiler-0/cljs/core.js

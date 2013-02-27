@@ -3,15 +3,34 @@
             [goog.dom.classes :as classes]
             [goog.dom :as dom]))
 
-(defn update-menu [E elm]
-  (fj/mapE (fn [event]
-             (classes/remove elm "active")
-             (when (= elm (.-toElement event))
-               (classes/add elm "active"))) E))
+(defn elm
+  "If e is a string it is looked as an id in the dom tree.
+  Otherwise it is returned."
+  [e]
+  (if (string? e)
+    (dom/getElement e)
+    e))
+
+(defn e=
+  "Compares two elements, represented as dom elements or
+  their ids."
+  [e1 e2]
+  (= (elm e1) (elm e2)))
+
+(defn toElementE [eventE]
+  (fj/mapE (fn [event] (.-toElement event)) eventE))
+
+(defn activeClassB [B e]
+  (fj/liftB (fn [target-elm]
+              (if (e= target-elm e) "active" "")) B))
 
 (defn ^:export init []
   (let [frontpage-clicksE (fj/clicksE "frontpage-link")
         counting-clicksE (fj/clicksE "counting-link")
-        activateE (fj/mergeE frontpage-clicksE counting-clicksE)]
-    (update-menu activateE (dom/getElement "frontpage-link"))
-    (update-menu activateE (dom/getElement "counting-link"))))
+        currentActiveB (-> (fj/mergeE frontpage-clicksE counting-clicksE)
+                           toElementE
+                           (fj/startsWith "frontpage-link"))]
+    (doseq [e ["frontpage-link" "counting-link"]]
+      (fj/insertValueB (activeClassB currentActiveB e)
+                       e
+                       "className"))))

@@ -11,6 +11,11 @@
     (dom/getElement e)
     e))
 
+(defn elm-id [e]
+  "If e is a string return it directly.
+  Otherwise regard it as a dom element and return its id"
+  (.-id (elm e)))
+
 (defn e=
   "Compares two elements, represented as dom elements or
   their ids."
@@ -24,25 +29,65 @@
   (fj/liftB (fn [target-elm]
               (if (e= target-elm e) "active" "")) B))
 
-(defn pageB [B]
+(def page-map
+  {"counting-link" :counting
+   "frontpage-link" :frontpage})
+
+(defn isActiveB? [B k]
   (fj/liftB
    (fn [e]
-     (let [value (case (.-id e)
-                   "counting-link" "Counting Page"
-                   "frontpage-link" "Front Page"
-                   "No idea?")]
-       (dom/createDom "span" nil value))) B))
+     (let [id (elm-id e)
+           result (= (id page-map) k)]
+       (.log js/console result)
+       result)) B))
 
 (def namesB
   (fj/constantB ["olga" "otto"]))
 
-(defn namesMenuB [B]
+(defn activitiesB []
+  (let [request (clj->js {:url "/rest/activities"
+                          :request "get"
+                          :response "plain"})]
+    (fj/startsWith (fj/getWebServiceObjectE request) ["No activities"])))
+
+(defn myCondB [& pairs]
+  (let [[test result] (first pairs)]
+    (fj/ifB test
+            result
+            (if (> (count (rest pairs)) 0)
+              (myCondB (rest pairs))
+              (fj/constantB "Bom")))))
+
+#_(defn contentB [activeB]
+  (fj/ifB (isActiveB? activeB :frontpage)
+          (fj/constantB "Frontpage")
+          (fj/startsWith
+              (fj/getWebServiceObjectE
+               (fj/oneE (clj->js {:url "/rest/activities"
+                                  :request "get"
+                                  :response "plain"})))
+              "Loading")))
+
+(defn contentB [activeB]
+  (myCondB [ (isActiveB? activeB :frontpage)
+             (fj/constantB "FrontPage")]
+           [ (isActiveB? activeB :counting)
+             (fj/startsWith
+              (fj/getWebServiceObjectE
+               (fj/oneE (clj->js {:url "/rest/activities"
+                                  :request "get"
+                                  :response "plain"})))
+              "Loading")]
+
+           [ (fj/constantB true) (fj/constantB "Didn't match")]))
+
+(defn menuB [B]
   (fj/liftB
-   (fn [names]
+   (fn [items]
      (let [menu (dom/createDom "div")]
-       (doseq [name names]
-         (let [item (dom/createDom "span" (clj->js {:class "menu-item"}) name)]
-           (dom/appendChild menu item)))
+       (doseq [item items]
+         (let [e (dom/createDom "span" (clj->js {:class "menu-item"}) item)]
+           (dom/appendChild menu e)))
        menu)) B))
 
 (defn ^:export init []
@@ -55,6 +100,8 @@
       (fj/insertValueB (activeClassB currentActiveB e)
                        e
                        "className"))
-    (fj/insertDomB (pageB currentActiveB) "content-holder" "beginning")
+    (fj/insertDomB (menuB namesB) "name-menu")
 
-    (fj/insertDomB (namesMenuB namesB) "name-menu")))
+    (fj/insertValueB (contentB currentActiveB) "content-holder" "innerHTML")
+
+))

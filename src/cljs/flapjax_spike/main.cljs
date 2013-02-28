@@ -106,27 +106,24 @@
   (fn [main activity]
     (switch-activity main activity [breastFeedE breast-feed-request] [nappyChangeE nappy-change-request])))
 
-(defn getSwitchE [switchBs inputBs switch-fn]
-  "Takes two lists of behaviours and a function that returns a tuple [E, f]
-   given switchBs' values. f is invoked on inputBs' values and the result is sent to E"
-  (apply fj/liftB (fn [& args]
-                   (let [switches (take (count switchBs) args)
-                         inputs (drop (count switchBs) args)
-                         [E f] (apply switch-fn switches)]
-                     (when (and E f)
-                       (fj/sendEvent E (apply f inputs)))))
-         (concat switchBs inputBs) ))
+(defn getSwitchE
+  "Invokes switch-fn on switchB value to get E and sends inputB value as event to E."
+  [switchB inputB switch-fn]
+  (fj/liftB
+   (fn [switch input]
+     (let [E (switch-fn switch)]
+       (when E
+         (fj/sendEvent E input))))
+   switchB
+   inputB))
+
+(defn liftVectorB
+  [& Bs]
+  (apply fj/liftB
+         (fn [& args] args)
+         Bs))
 
 ;; dom
-
-(defn caseB [B & values-and-resultsB]
-  (fj/liftB #(first %)
-            (fj/filter #(isEqualB % nil)
-                       (fj/map (fn [value resultB]
-                                 (fj/ifB (isEqualB B value)
-                                         resultB
-                                         (fj/constantB nil)))
-                               (partition 2 values-and-resultsB)))))
 
 (defn frontPageDomB []
   (fj/oneE (dom/createDom "h3" nil "Welcome!")))
@@ -143,47 +140,27 @@
 ;; init
 
 (defn ^:export init []
-  (let [frontpage-clicksE (fj/clicksE "frontpage-link")
-        counting-clicksE (fj/clicksE "counting-link")
-        currentActiveB (-> (fj/mergeE frontpage-clicksE counting-clicksE)
-                           toElementE
-                           (fj/startsWith "frontpage-link"))
-        consumeE (fj/receiverE)
-
-        inputE (fj/receiverE)
+  (let [inputE (fj/receiverE)
 
         mainB (fj/constantB :counting)
         activityB (fj/startsWith inputE :breast-feed)
-        childB (fj/constantB "olga")]
+        childB (fj/constantB "olga")
 
-    (fj/mapE (fn [s] (.log js/console s)) consumeE)
+        switchB (liftVectorB mainB activityB)
+        breastFeedE (fj/receiverE)
+        nappyChangeE (fj/receiverE)
+        switch-fn (fn [[main activity]] (switch-activity main activity breastFeedE nappyChangeE))]
 
-    (getSwitchE [mainB activityB] [childB] (switch consumeE consumeE))
+    (->> breastFeedE
+         (fj/mapE breast-feed-request)
+         restE
+         (fj/mapE (fn [s] (.log js/console "(.)(.)" (pr-str s)))))
 
-    (fj/sendEvent inputE :nappy-change)
+    (->> nappyChangeE
+         (fj/mapE nappy-change-request)
+         restE
+         (fj/mapE (fn [s] (.log js/console "(_|_)" (pr-str s)))))
 
-    #_    (fj/insertDomB
+    (getSwitchE switchB childB switch-fn)
 
-#_     (caseB (fj/constantB "foo") "foo" (fj/constantB "is foo") "bar" (fj/constantB "bar"))
-     "content-holder")
-
-
-
-    #_    (let [nameE (fj/oneE "olga")]
-            (fj/insertDomB
-             (dynamicDomB
-              (breastFeedDomFromDataE (breastFeedGetRestE nameE)))
-             "content-holder"))
-
-
-
-
-
-
-    #_    (doseq [e ["frontpage-link" "counting-link"]]
-      (fj/insertValueB (activeClassB currentActiveB e)
-                       e
-                       "className"))
-    #_    (fj/insertDomB (menuB namesB) "name-menu")
-
-    #_    (fj/insertValueB (contentB currentActiveB) "content-holder" "innerHTML")))
+    (fj/sendEvent inputE :nappy-change)))

@@ -54,21 +54,13 @@
                           :response "plain"})]
     (fj/startsWith (fj/getWebServiceObjectE request) ["No activities"])))
 
-(defn restB [url]
-  (fj/liftB
-   (fn [s]
-     (reader/read-string s))
-   (fj/startsWith
-    (fj/getWebServiceObjectE
-     (fj/oneE (clj->js {:url url
-                        :request "get"
-                        :response "plain"})))
-    :loading)))
+(defn frontPageB [])
 
-(defn contentB [activeB]
-  (condB (isActiveB? activeB :frontpage) (fj/constantB "Frontpage")
-         (isActiveB? activeB :counting) (restB "/rest/activities")
-         (fj/constantB true) (fj/constantB "snaps")))
+(defn countingB [])
+
+(defn mainContentB [activeB]
+  (condB (isActiveB? activeB :frontpage) :frontpage
+         (isActiveB? activeB :counting) :counting))
 
 (defn menuB [B]
   (fj/liftB
@@ -79,18 +71,50 @@
            (dom/appendChild menu e)))
        menu)) B))
 
+;; rest
+
+(defn getRestE [urlE]
+  (fj/mapE #(reader/read-string %)
+           (fj/getWebServiceObjectE
+            (fj/mapE #(clj->js {:url %
+                                :request "get"
+                                :response "plain"})
+                     urlE))))
+
+(defn breastFeedGetRestE [childE]
+  (getRestE (fj/mapE
+             (fn [child]
+               (str "/rest/" child "/breast-feed")) childE)))
+
+(defn breastFeedDomFromDataE [dataE]
+  (fj/mapE
+   (fn [{:keys [meta count timestamp]}]
+     (let [value (str "Breast-fed " count " times. Last one was at " timestamp " on the " (:side meta) " side.")]
+      (dom/createDom "span" nil value))) dataE))
+
+(defn dynamicDomB [domE]
+  (fj/startsWith domE (dom/createDom "span" nil "Loading ...")))
+
+;; init
+
 (defn ^:export init []
   (let [frontpage-clicksE (fj/clicksE "frontpage-link")
         counting-clicksE (fj/clicksE "counting-link")
         currentActiveB (-> (fj/mergeE frontpage-clicksE counting-clicksE)
                            toElementE
                            (fj/startsWith "frontpage-link"))]
-    (doseq [e ["frontpage-link" "counting-link"]]
+
+    (let [nameE (fj/oneE "olga")]
+     (fj/insertDomB
+      (dynamicDomB
+       (breastFeedDomFromDataE (breastFeedGetRestE nameE)))
+      "content-holder"))
+
+
+    #_    (doseq [e ["frontpage-link" "counting-link"]]
       (fj/insertValueB (activeClassB currentActiveB e)
                        e
                        "className"))
-    (fj/insertDomB (menuB namesB) "name-menu")
+    #_    (fj/insertDomB (menuB namesB) "name-menu")
 
-    (fj/insertValueB (contentB currentActiveB) "content-holder" "innerHTML")
-
-))
+    #_    (fj/insertValueB (contentB currentActiveB) "content-holder" "innerHTML")))

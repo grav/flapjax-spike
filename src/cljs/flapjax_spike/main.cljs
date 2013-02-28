@@ -54,14 +54,6 @@
                           :response "plain"})]
     (fj/startsWith (fj/getWebServiceObjectE request) ["No activities"])))
 
-(defn myCondB [& pairs]
-  (let [[test result] (first pairs)]
-    (fj/ifB test
-            result
-            (if (= (count (rest pairs)) 0)
-              (fj/constantB "Bom")
-              (myCondB (rest pairs))))))
-
 (defn restB [url]
   (fj/liftB
    (fn [s]

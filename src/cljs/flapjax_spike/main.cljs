@@ -90,7 +90,6 @@
       :breast-feed breast-feed
       :nappy-change nappy-change)))
 
-
 (defn breast-feed-request [child]
   (rest-request (str "/rest/" child "/breast-feed"))  )
 
@@ -101,10 +100,6 @@
   (fj/mapE
    reader/read-string
    (fj/getWebServiceObjectE requestE)))
-
-(defn switch [breastFeedE nappyChangeE]
-  (fn [main activity]
-    (switch-activity main activity [breastFeedE breast-feed-request] [nappyChangeE nappy-change-request])))
 
 (defn getSwitchE
   "Invokes switch-fn on switchB value to get E and sends inputB value as event to E."
@@ -140,10 +135,12 @@
 ;; init
 
 (defn ^:export init []
-  (let [inputE (fj/receiverE)
-
+  (let [frontpage-clicksE (fj/clicksE "frontpage-link")
+        counting-clicksE (fj/clicksE "counting-link")
         mainB (fj/constantB :counting)
-        activityB (fj/startsWith inputE :breast-feed)
+        activityB (-> (fj/mergeE frontpage-clicksE counting-clicksE)
+                      toElementE
+                      (fj/startsWith :breast-feed))
         childB (fj/constantB "olga")
 
         switchB (liftVectorB mainB activityB)
@@ -161,6 +158,4 @@
          restE
          (fj/mapE (fn [s] (.log js/console "(_|_)" (pr-str s)))))
 
-    (getSwitchE switchB childB switch-fn)
-
-    (fj/sendEvent inputE :nappy-change)))
+    (getSwitchE switchB childB switch-fn)))

@@ -67,14 +67,14 @@
   (condB (isActiveB? activeB :frontpage) (fj/constantB :frontpage)
          (isActiveB? activeB :counting) (fj/constantB :counting)))
 
-(defn menuB [B]
-  (fj/liftB
-   (fn [items]
-     (let [menu (dom/createDom "div")]
-       (doseq [item items]
-         (let [e (dom/createDom "span" (clj->js {:class "menu-item"}) item)]
-           (dom/appendChild menu e)))
-       menu)) B))
+(defn menu [items]
+  (let [menu (dom/createDom "div")]
+   (doseq [item items]
+     (let [span (dom/createDom "span" (clj->js {:class "menu-item"}))
+           a (dom/createDom "a" (clj->js {"id" (str item) "href" "#"}) item)]
+       (dom/appendChild span a)
+       (dom/appendChild menu span)))
+   menu))
 
 ;; rest
 
@@ -96,6 +96,9 @@
 
 (defn nappy-change-request [child]
   (rest-request (str "/rest/" child "/nappy-change"))  )
+
+(defn children-request []
+  (rest-request "/rest/children"))
 
 (defn restE [requestE]
   (fj/mapE
@@ -141,7 +144,14 @@
 (defn dynamicDomB [domE]
   (fj/startsWith domE (dom/createDom "span" nil "Loading ...")))
 
+(defn logE [E]
+  (fj/mapE #(.log js/console (pr-str %)) E))
+
 ;; init
+
+(defn addChildE [id domB]
+  (.log js/console id)
+  (fj/insertValueE domB id "innerHTML"))
 
 (defn ^:export init []
   (let [activityE (->>
@@ -153,9 +163,13 @@
                                     id (.-id elm)]
                                 (id activity-map)))))
 
+        childrenE (restE (fj/mapE children-request))
+
         mainB (fj/constantB :counting)
         activityB (fj/startsWith activityE :breast-feed)
-        childB (fj/constantB "olga")
+
+        childB (fj/constantB "Olga")
+
 
         switchB (liftVectorB mainB activityB)
         breastFeedE (fj/receiverE)
@@ -174,5 +188,18 @@
 
     (getSwitchE switchB childB switch-fn)
 
-)
-)
+    (fj/insertDomE
+     (fj/mapE menu childrenE)
+     "child-menu")
+
+    (fj/mapE (fn [e] (.log js/console "foo")) (fj/clicksE "test-link"))
+
+    (->>
+     childrenE
+     logE))
+
+
+
+
+
+#_  (dom/appendChild (elm "child-menu") ))

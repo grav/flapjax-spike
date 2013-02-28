@@ -23,8 +23,8 @@
 (defroutes main-routes
 
   ;; default activities
-  (GET "/rest/activities" []
-       (generate-response ["breast-feed" "nappy-change"]))
+  (GET "/rest/children" []
+       (generate-response ["Olga" "Otto"]))
 
   (GET "/rest/:child/:activity" [child activity]
        (generate-response

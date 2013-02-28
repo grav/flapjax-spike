@@ -45,6 +45,11 @@
        (.log js/console result)
        result)) B))
 
+(defn isEqualB [B v]
+  (fj/liftB
+   (fn [v2]
+     (= v v2 )) B))
+
 (def namesB
   (fj/constantB ["olga" "otto"]))
 
@@ -59,8 +64,8 @@
 (defn countingB [])
 
 (defn mainContentB [activeB]
-  (condB (isActiveB? activeB :frontpage) :frontpage
-         (isActiveB? activeB :counting) :counting))
+  (condB (isActiveB? activeB :frontpage) (fj/constantB :frontpage)
+         (isActiveB? activeB :counting) (fj/constantB :counting)))
 
 (defn menuB [B]
   (fj/liftB
@@ -73,18 +78,58 @@
 
 ;; rest
 
-(defn getRestE [urlE]
-  (fj/mapE #(reader/read-string %)
-           (fj/getWebServiceObjectE
-            (fj/mapE #(clj->js {:url %
-                                :request "get"
-                                :response "plain"})
-                     urlE))))
+(defn rest-request [url]
+  (clj->js {:url url
+            :request "get"
+            :response "plain"}))
 
-(defn breastFeedGetRestE [childE]
-  (getRestE (fj/mapE
-             (fn [child]
-               (str "/rest/" child "/breast-feed")) childE)))
+
+(defn switch-activity [main activity breast-feed nappy-change]
+  (when (= :counting main)
+    (case activity
+      :breast-feed breast-feed
+      :nappy-change nappy-change)))
+
+
+(defn breast-feed-request [child]
+  (rest-request (str "/rest/" child "/breast-feed"))  )
+
+(defn nappy-change-request [child]
+  (rest-request (str "/rest/" child "/nappy-change"))  )
+
+(defn restE [requestE]
+  (fj/mapE
+   reader/read-string
+   (fj/getWebServiceObjectE requestE)))
+
+(defn switch [breastFeedE nappyChangeE]
+  (fn [main activity]
+    (switch-activity main activity [breastFeedE breast-feed-request] [nappyChangeE nappy-change-request])))
+
+(defn getSwitchE [switchBs inputBs switch-fn]
+  "Takes two lists of behaviours and a function that returns a tuple [E, f]
+   given switchBs' values. f is invoked on inputBs' values and the result is sent to E"
+  (apply fj/liftB (fn [& args]
+                   (let [switches (take (count switchBs) args)
+                         inputs (drop (count switchBs) args)
+                         [E f] (apply switch-fn switches)]
+                     (when (and E f)
+                       (fj/sendEvent E (apply f inputs)))))
+         (concat switchBs inputBs) ))
+
+;; dom
+
+(defn caseB [B & values-and-resultsB]
+  (fj/liftB #(first %)
+            (fj/filter #(isEqualB % nil)
+                       (fj/map (fn [value resultB]
+                                 (fj/ifB (isEqualB B value)
+                                         resultB
+                                         (fj/constantB nil)))
+                               (partition 2 values-and-resultsB)))))
+
+(defn frontPageDomB []
+  (fj/oneE (dom/createDom "h3" nil "Welcome!")))
 
 (defn breastFeedDomFromDataE [dataE]
   (fj/mapE
@@ -102,13 +147,37 @@
         counting-clicksE (fj/clicksE "counting-link")
         currentActiveB (-> (fj/mergeE frontpage-clicksE counting-clicksE)
                            toElementE
-                           (fj/startsWith "frontpage-link"))]
+                           (fj/startsWith "frontpage-link"))
+        consumeE (fj/receiverE)
 
-    (let [nameE (fj/oneE "olga")]
-     (fj/insertDomB
-      (dynamicDomB
-       (breastFeedDomFromDataE (breastFeedGetRestE nameE)))
-      "content-holder"))
+        inputE (fj/receiverE)
+
+        mainB (fj/constantB :counting)
+        activityB (fj/startsWith inputE :breast-feed)
+        childB (fj/constantB "olga")]
+
+    (fj/mapE (fn [s] (.log js/console s)) consumeE)
+
+    (getSwitchE [mainB activityB] [childB] (switch consumeE consumeE))
+
+    (fj/sendEvent inputE :nappy-change)
+
+    #_    (fj/insertDomB
+
+#_     (caseB (fj/constantB "foo") "foo" (fj/constantB "is foo") "bar" (fj/constantB "bar"))
+     "content-holder")
+
+
+
+    #_    (let [nameE (fj/oneE "olga")]
+            (fj/insertDomB
+             (dynamicDomB
+              (breastFeedDomFromDataE (breastFeedGetRestE nameE)))
+             "content-holder"))
+
+
+
+
 
 
     #_    (doseq [e ["frontpage-link" "counting-link"]]

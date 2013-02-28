@@ -30,6 +30,9 @@
   (fj/liftB (fn [target-elm]
               (if (e= target-elm e) "active" "")) B))
 
+(defn condB [& pairs]
+  (apply fj/condB (map clj->js (partition 2 pairs))))
+
 (def page-map
   {"counting-link" :counting
    "frontpage-link" :frontpage})
@@ -51,9 +54,6 @@
                           :response "plain"})]
     (fj/startsWith (fj/getWebServiceObjectE request) ["No activities"])))
 
-#_(defn myCondB [& pairs]
-  (reduce (fn [test result])))
-
 (defn myCondB [& pairs]
   (let [[test result] (first pairs)]
     (fj/ifB test
@@ -74,13 +74,9 @@
     :loading)))
 
 (defn contentB [activeB]
-  (fj/ifB (isActiveB? activeB :frontpage)
-          (fj/constantB "Frontpage")
-          (restB "/rest/activities")))
-
-#_(defn contentB [activeB]
-  (fj/condB [(isActiveB? activeB :frontpage) (fj/constantB "Frontpage")]
-            [(isActiveB? activeB :counting) (restB "/rest/activities")]))
+  (condB (isActiveB? activeB :frontpage) (fj/constantB "Frontpage")
+         (isActiveB? activeB :counting) (restB "/rest/activities")
+         (fj/constantB true) (fj/constantB "snaps")))
 
 (defn menuB [B]
   (fj/liftB

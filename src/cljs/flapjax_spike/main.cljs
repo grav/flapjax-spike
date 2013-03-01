@@ -70,8 +70,10 @@
 (defn menu [items]
   (let [menu (dom/createDom "div")]
    (doseq [item items]
-     (let [span (dom/createDom "span" (clj->js {:class "menu-item"}))
-           a (dom/createDom "a" (clj->js {"id" (str item) "href" "#"}) item)]
+     (let [span (dom/createDom "span")
+           a (dom/createDom "a" (clj->js {"id" (str item)
+                                          "href" "#"
+                                          "class" "menu-item"}) item)]
        (dom/appendChild span a)
        (dom/appendChild menu span)))
    menu))

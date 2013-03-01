@@ -116,11 +116,11 @@
 (defn ^:export init []
 
   (let [activityE (->>
-                   (apply fj/mergeE
-                          (map fj/clicksE
-                               (fj/getElementsByClass
-                                "menu-item"
-                                (util/elm "activity-menu"))))
+                   (fj/getElementsByClass
+                    "menu-item"
+                    (util/elm "activity-menu"))
+                   (map fj/clicksE)
+                   (apply fj/mergeE)
                    (fj/mapE (fn [event]
                               (let [elm (.-toElement event)
                                     id (.-id elm)]

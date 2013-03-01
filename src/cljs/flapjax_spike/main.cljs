@@ -129,7 +129,7 @@
   (fj/startsWith domE (dom/createDom "span" nil "Loading ...")))
 
 (defn logE [E]
-  (fj/mapE #(.log js/console (pr-str %)) E))
+  (fj/mapE #(.log js/console (clj->js %)) E))
 
 ;; init
 

@@ -2,33 +2,15 @@
   (:require [flapjax :as fj]
             [goog.dom.classes :as classes]
             [goog.dom :as dom]
-            [cljs.reader :as reader]))
-
-(defn elm
-  "If e is a string it is looked as an id in the dom tree.
-  Otherwise it is returned."
-  [e]
-  (if (string? e)
-    (dom/getElement e)
-    e))
-
-(defn elm-id [e]
-  "If e is a string return it directly.
-  Otherwise regard it as a dom element and return its id"
-  (.-id (elm e)))
-
-(defn e=
-  "Compares two elements, represented as dom elements or
-  their ids."
-  [e1 e2]
-  (= (elm e1) (elm e2)))
+            [cljs.reader :as reader]
+            [flapjax-spike.util :as util]))
 
 (defn toElementE [eventE]
   (fj/mapE (fn [event] (.-toElement event)) eventE))
 
 (defn activeClassB [B e]
   (fj/liftB (fn [target-elm]
-              (if (e= target-elm e) "active" "")) B))
+              (if (util/e= target-elm e) "active" "")) B))
 
 (defn condB [& pairs]
   (apply fj/condB (map clj->js (partition 2 pairs))))
@@ -40,7 +22,7 @@
 (defn isActiveB? [B k]
   (fj/liftB
    (fn [e]
-     (let [id (elm-id e)
+     (let [id (util/elm-id e)
            result (= (id page-map) k)]
        (.log js/console result)
        result)) B))
@@ -119,11 +101,23 @@
 (defn frontPageDomB []
   (fj/oneE (dom/createDom "h3" nil "Welcome!")))
 
-(defn breastFeedDomFromDataE [dataE]
-  (fj/mapE
-   (fn [{:keys [meta count timestamp]}]
-     (let [value (str "Breast-fed " count " times. Last one was at " timestamp " on the " (:side meta) " side.")]
-      (dom/createDom "span" nil value))) dataE))
+(defn breast-feed-dom [{:keys [meta count timestamp] :as data}]
+  (let [value (if data
+                (str "(.)(.) Breast-fed "
+                     count " times. Last one was at "
+                     timestamp " on the "
+                     (:side meta) " side.")
+                "No breastfeeding done. Kid might be hungry.")]
+    (dom/createDom "span" nil value)))
+
+(defn nappy-change-dom [{:keys [meta count timestamp] :as data}]
+  (let [value (if data
+                (str "(_|_) Nappy-changed "
+                     count "times. Changed at"
+                     timestamp " by  "
+                     {:who meta} ".")
+                "No nappy-changing done. Kid might be smelly.")]
+    (dom/createDom "span" nil value)))
 
 (defn dynamicDomB [domE]
   (fj/startsWith domE (dom/createDom "span" nil "Loading ...")))
@@ -133,10 +127,6 @@
 
 ;; init
 
-(defn addChildE [id domB]
-  (.log js/console id)
-  (fj/insertValueE domB id "innerHTML"))
-
 (defn ^:export init []
 
   (let [activityE (->>
@@ -144,7 +134,7 @@
                           (map fj/clicksE
                                (fj/getElementsByClass
                                 "menu-item"
-                                (elm "activity-menu"))))
+                                (util/elm "activity-menu"))))
                    (fj/mapE (fn [event]
                               (let [elm (.-toElement event)
                                     id (.-id elm)]

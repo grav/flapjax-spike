@@ -98,6 +98,11 @@
   {"nappy-link" :nappy-change
    "breast-link" :breast-feed})
 
+(defn active-class [activity elm-id]
+  (if (= activity (get activity-map elm-id))
+    "active" ""))
+
+
 (defn frontPageDomB []
   (fj/oneE (dom/createDom "h3" nil "Welcome!")))
 
@@ -153,6 +158,16 @@
         breastFeedE (fj/receiverE)
         nappyChangeE (fj/receiverE)
         switch-fn (fn [[main activity]] (switch-activity main activity breastFeedE nappyChangeE))]
+
+
+    (doseq [elm (fj/getElementsByClass
+                 "menu-item"
+                 (util/elm "activity-menu"))]
+      (fj/insertValueB
+       (fj/liftB
+        #(active-class % (util/elm-id elm))
+        activityB)
+       elm "className"))
 
     (fj/insertDomE
      (fj/mergeE

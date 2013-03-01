@@ -8,28 +8,9 @@
 (defn toElementE [eventE]
   (fj/mapE (fn [event] (.-toElement event)) eventE))
 
-(defn activeClassB [B e]
-  (fj/liftB (fn [target-elm]
-              (if (util/e= target-elm e) "active" "")) B))
-
-(defn condB [& pairs]
-  (apply fj/condB (map clj->js (partition 2 pairs))))
-
 (def page-map
   {"counting-link" :counting
    "frontpage-link" :frontpage})
-
-(defn isActiveB? [B k]
-  (fj/liftB
-   (fn [e]
-     (let [id (util/elm-id e)
-           result (= (id page-map) k)]
-       (.log js/console result)
-       result)) B))
-
-(defn mainContentB [activeB]
-  (condB (isActiveB? activeB :frontpage) (fj/constantB :frontpage)
-         (isActiveB? activeB :counting) (fj/constantB :counting)))
 
 (defn menu [items]
   (let [menu (dom/createDom "div")]

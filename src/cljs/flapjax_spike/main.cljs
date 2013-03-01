@@ -172,18 +172,6 @@
 
     (getSwitchE switchB childB switch-fn)
 
-    (fj/insertDomE
-     (fj/mapE menu childrenE)
-     "child-menu")
-
-    (fj/mapE (fn [e] (.log js/console "foo")) (fj/clicksE "test-link"))
-
-    (->>
-     childrenE
-     logE))
-
-
-
-
-
-#_  (dom/appendChild (elm "child-menu") ))
+   (fj/insertDomE
+     childMenuE
+     "child-menu-content")))

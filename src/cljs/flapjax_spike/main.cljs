@@ -181,6 +181,10 @@
           (fj/mapE breast-feed-dom)))
      "content")
 
+    (->> childrenE
+         (fj/mapE fj/clicksE)
+         logE)
+
     (getSwitchE switchB childB switch-fn)
 
    (fj/insertDomE

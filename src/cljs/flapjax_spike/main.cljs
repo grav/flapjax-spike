@@ -45,24 +45,6 @@
        (.log js/console result)
        result)) B))
 
-(defn isEqualB [B v]
-  (fj/liftB
-   (fn [v2]
-     (= v v2 )) B))
-
-(def namesB
-  (fj/constantB ["olga" "otto"]))
-
-(defn activitiesB []
-  (let [request (clj->js {:url "/rest/activities"
-                          :request "get"
-                          :response "plain"})]
-    (fj/startsWith (fj/getWebServiceObjectE request) ["No activities"])))
-
-(defn frontPageB [])
-
-(defn countingB [])
-
 (defn mainContentB [activeB]
   (condB (isActiveB? activeB :frontpage) (fj/constantB :frontpage)
          (isActiveB? activeB :counting) (fj/constantB :counting)))

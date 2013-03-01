@@ -157,22 +157,24 @@
         mainB (fj/constantB :counting)
         activityB (fj/startsWith activityE :breast-feed)
 
-        childB (fj/constantB "Olga")
+        childB (fj/constantB "olga")
 
         switchB (liftVectorB mainB activityB)
         breastFeedE (fj/receiverE)
         nappyChangeE (fj/receiverE)
         switch-fn (fn [[main activity]] (switch-activity main activity breastFeedE nappyChangeE))]
 
-    (->> breastFeedE
-         (fj/mapE breast-feed-request)
-         restE
-         (fj/mapE (fn [s] (.log js/console "(.)(.)" (pr-str s)))))
-
-    (->> nappyChangeE
-         (fj/mapE nappy-change-request)
-         restE
-         (fj/mapE (fn [s] (.log js/console "(_|_)" (pr-str s)))))
+    (fj/insertDomE
+     (fj/mergeE
+      (->> nappyChangeE
+           (fj/mapE nappy-change-request)
+           restE
+           (fj/mapE nappy-change-dom))
+      (->> breastFeedE
+          (fj/mapE breast-feed-request)
+          restE
+          (fj/mapE breast-feed-dom)))
+     "content")
 
     (getSwitchE switchB childB switch-fn)
 

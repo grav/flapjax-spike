@@ -138,22 +138,26 @@
   (fj/insertValueE domB id "innerHTML"))
 
 (defn ^:export init []
+
   (let [activityE (->>
-                   (fj/mergeE
-                    (fj/clicksE "nappy-link")
-                    (fj/clicksE "breast-link"))
+                   (apply fj/mergeE
+                          (map fj/clicksE
+                               (fj/getElementsByClass
+                                "menu-item"
+                                (elm "activity-menu"))))
                    (fj/mapE (fn [event]
                               (let [elm (.-toElement event)
                                     id (.-id elm)]
                                 (id activity-map)))))
 
         childrenE (restE (fj/mapE children-request))
+        childMenuE (fj/mapE menu childrenE)
+
 
         mainB (fj/constantB :counting)
         activityB (fj/startsWith activityE :breast-feed)
 
         childB (fj/constantB "Olga")
-
 
         switchB (liftVectorB mainB activityB)
         breastFeedE (fj/receiverE)

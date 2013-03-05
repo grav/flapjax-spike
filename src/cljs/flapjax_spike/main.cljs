@@ -54,7 +54,10 @@
 
 (defn switch [breastFeedE nappyChangeE]
   (fn [main activity]
-    (switch-activity main activity [breastFeedE breast-feed-request] [nappyChangeE nappy-change-request])))
+    (switch-activity main
+                     activity
+                     [breastFeedE breast-feed-request]
+                     [nappyChangeE nappy-change-request])))
 
 (defn getSwitchE
   "Invokes switch-fn on switchB value to get E and sends inputB value as event to E."
@@ -138,7 +141,11 @@
         switchB (liftVectorB mainB activityB)
         breastFeedE (fj/receiverE)
         nappyChangeE (fj/receiverE)
-        switch-fn (fn [[main activity]] (switch-activity main activity breastFeedE nappyChangeE))]
+        switch-fn (fn [[main activity]] (switch-activity
+                                        main
+                                        activity
+                                        breastFeedE
+                                        nappyChangeE))]
 
 
     (doseq [elm (fj/getElementsByClass

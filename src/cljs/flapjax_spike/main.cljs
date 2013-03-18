@@ -23,17 +23,6 @@
 
 ;; rest
 
-(defn rest-request [url]
-  {:url url
-   :request "get"
-   :response "plain"})
-
-(defn post-request [url data]
-  {:url url
-   :request "post"
-   :response "plain"
-   :body data})
-
 (defn switch-activity [main activity breast-feed nappy-change]
   (when (= :counting main)
     (case activity
@@ -47,33 +36,19 @@
   (str "/rest/" child "/nappy-change"))
 
 (defn breast-feed-request [child]
-  (rest-request (breast-feed-url child)))
+  (util/rest-request (breast-feed-url child)))
 
 (defn nappy-change-request [child]
-  (rest-request (nappy-change-url child)))
+  (util/rest-request (nappy-change-url child)))
 
 (defn breast-feed-post-request [child data]
-  (post-request (breast-feed-url child) data))
+  (util/post-request (breast-feed-url child) data))
 
 (defn nappy-change-post-request [child data]
-  (post-request (nappy-change-url child) data))
+  (util/post-request (nappy-change-url child) data))
 
 (defn children-request []
-  (rest-request "/rest/children"))
-
-(defn restE
-  "Takes an event stream of maps as defined in the Flapjax api, but body is assumed
-  to be edn data."
-  [requestE]
-  (let [responseE (fj/receiverE)
-        callback #(fj/sendEvent responseE %)]
-    (fj/mapE
-     (fn [req]
-       (case (:request req)
-         "get" (edn/get (:url req) callback)
-         "post" (edn/post (:url req) callback (:body req))))
-     requestE)
-    responseE))
+  (util/rest-request "/rest/children"))
 
 (defn switch [breastFeedE nappyChangeE]
   (fn [main activity]
@@ -107,7 +82,7 @@
 (defn nappy-change-dom [{:keys [meta count timestamp] :as data}]
   (let [value (if data
                 (str "(_|_) Nappy-changed "
-                     count "times. Changed at"
+                     count " times. Changed at"
                      timestamp " by  "
                      (get meta :who) ".")
                 "No nappy-changing done. Kid might be smelly.")]
@@ -124,7 +99,7 @@
   (->> E
        util/removeNilE
        (fj/mapE request-fn)
-       restE))
+       util/restE))
 
 (defn serverModelFromB
   "Retrieves the current server model based on the value of B.
@@ -160,7 +135,7 @@
 
 (defn ^:export init
   []
-  (let [childrenE (restE (fj/mapE children-request))
+  (let [childrenE (util/restE (fj/mapE children-request))
         switchChildE (fj/receiverE)
         currentChildB (fj/startsWith switchChildE nil)
 
@@ -198,9 +173,9 @@
 
         ;; stream for feeding events as restE maps
         responseFeedE (-> (util/BonE nextBreastFeedRequestB breastFeedClickE)
-                          restE)
+                          util/restE)
         responseChangeE (-> (util/BonE nextNappyChangeRequestB nappyChangeClickE)
-                            restE)]
+                            util/restE)]
 
     ;; setting up children menu
     (fj/mapE #(set-children-menu % switchChildE) childrenE)

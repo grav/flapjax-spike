@@ -1,6 +1,7 @@
 (ns flapjax-spike.util
   (:require [goog.dom :as dom]
-            [flapjax :as fj]))
+            [flapjax :as fj]
+            [flapjax-spike.edn :as edn]))
 
 (defn elm
   "If e is a string it is looked as an id in the dom tree.
@@ -83,3 +84,30 @@
   (fj/mapE
    (fn [e] (fj/sendEvent sinkE))
    sourceE))
+
+;; REST
+
+(defn rest-request [url]
+  {:url url
+   :request "get"
+   :response "plain"})
+
+(defn post-request [url data]
+  {:url url
+   :request "post"
+   :response "plain"
+   :body data})
+
+(defn restE
+  "Takes an event stream of maps as defined in the Flapjax api, but body is assumed
+  to be edn data."
+  [requestE]
+  (let [responseE (fj/receiverE)
+        callback #(fj/sendEvent responseE %)]
+    (fj/mapE
+     (fn [req]
+       (case (:request req)
+         "get" (edn/get (:url req) callback)
+         "post" (edn/post (:url req) callback (:body req))))
+     requestE)
+    responseE))

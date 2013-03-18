@@ -10,10 +10,13 @@
                  [ring-edn "0.1.0"]]
   :plugins [[lein-cljsbuild "0.3.0"]
             [lein-ring "0.7.0"]]
-  :cljsbuild {:builds [{:source-path "src/cljs"
-                        :compiler {:output-to "resources/public/js/main.js"
-                                   :optimizations :whitespace
-                                   :pretty-print true
-                                   :foreign-libs [{:file "http://www.flapjax-lang.org/download/flapjax-2.1.js"
-                                                   :provides "flapjax"}]}}]}
+  :cljsbuild {:builds
+              [{:source-paths ["src/cljs"],
+                :compiler
+                {:pretty-print true,
+                 :output-to "resources/public/js/main.js",
+                 :foreign-libs
+                 [{:provides "flapjax",
+                   :file "http://www.flapjax-lang.org/download/flapjax-2.1.js"}],
+                 :optimizations :whitespace}}]}
   :ring {:handler flapjax-spike.routes/app})

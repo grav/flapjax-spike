@@ -64,3 +64,22 @@
   "Removes nil events from E."
   [E]
   (fj/filterE E (comp not nil?)))
+
+(defn BonE
+  "Returns a new stream which fires the current value of B on events on E."
+  [B E]
+  (let [newE (fj/receiverE)]
+    (fj/mapE (fn [_] (fj/sendEvent newE (fj/valueNow B))) E)
+    newE))
+
+(defn changesBOrFireE
+  [B E]
+  (fj/mergeE (fj/changes B) (BonE B E)))
+
+(defn forwardEvents
+  "Sends all events received on sourceE to sinkE. sinkE is assumed to be
+  able to receive events via sendEvent."
+  [sourceE sinkE]
+  (fj/mapE
+   (fn [e] (fj/sendEvent sinkE))
+   sourceE))

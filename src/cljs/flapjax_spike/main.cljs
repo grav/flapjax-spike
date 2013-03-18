@@ -122,7 +122,7 @@
   as used by restE. Ignores nil values of E."
   [E request-fn]
   (->> E
-       utils/removeNilE
+       util/removeNilE
        (fj/mapE request-fn)
        restE))
 
@@ -156,39 +156,6 @@
       (dom/appendChild menu elm))))
 
 
-;; transforming state
-
-(defn feed
-  "Returns the next feed item based on the current data. Returns a fresh
-  set of data when data is nil."
-  [side]
-  {:side side})
-
-(defn change
-  "Returns the next nappy change item based on the currenct data. Returns
-  a fresh set of data when data is nil."
-  [who]
-  {:who who})
-
-(defn BonE
-  "Returns a new stream which fires the current value of B on events on E."
-  [B E]
-  (let [newE (fj/receiverE)]
-    (fj/mapE (fn [_] (fj/sendEvent newE (fj/valueNow B))) E)
-    newE))
-
-(defn changesBOrFireE
-  [B E]
-  (fj/mergeE (fj/changes B) (BonE B E)))
-
-(defn forwardEvents
-  "Sends all events received on sourceE to sinkE. sinkE is assumed to be
-  able to receive events via sendEvent."
-  [sourceE sinkE]
-  (fj/mapE
-   (fn [e] (fj/sendEvent sinkE))
-   sourceE))
-
 ;; init
 
 (defn ^:export init
@@ -201,20 +168,17 @@
 
         breastFeedB (fj/startsWith
                      (serverModelFromE
-                      (changesBOrFireE currentChildB serverModelUpdatedE)
+                      (util/changesBOrFireE currentChildB serverModelUpdatedE)
                       breast-feed-request)
                      nil)
         nappyChangeB (fj/startsWith
                      (serverModelFromE
-                      (changesBOrFireE currentChildB serverModelUpdatedE)
+                      (util/changesBOrFireE currentChildB serverModelUpdatedE)
                       nappy-change-request)
                      nil)
 
-        nextBreastFeedB (fj/liftB feed "left")
-        nextNappyChangeB (fj/liftB change "Mikkel")
-
-        nextBreastFeedRequestB (fj/liftB breast-feed-post-request currentChildB nextBreastFeedB)
-        nextNappyChangeRequestB (fj/liftB nappy-change-post-request currentChildB nextNappyChangeB)
+        nextBreastFeedRequestB (fj/liftB breast-feed-post-request currentChildB {:side "left"})
+        nextNappyChangeRequestB (fj/liftB nappy-change-post-request currentChildB {:who "Mikkel"})
 
         breastFeedDomB (fj/liftB breast-feed-dom breastFeedB)
         nappyChageDomB (fj/liftB nappy-change-dom nappyChangeB)
@@ -227,17 +191,15 @@
                                   (let [elm (.-toElement event)
                                         id (.-id elm)]
                                     (id activity-map)))))
-
-        mainB (fj/constantB :counting)
         activityB (fj/startsWith activityE :breast-feed)
 
         breastFeedClickE (fj/clicksE "breast-feed-action")
         nappyChangeClickE (fj/clicksE "nappy-change-action")
 
         ;; stream for feeding events as restE maps
-        responseFeedE (-> (BonE nextBreastFeedRequestB breastFeedClickE)
+        responseFeedE (-> (util/BonE nextBreastFeedRequestB breastFeedClickE)
                           restE)
-        responseChangeE (-> (BonE nextNappyChangeRequestB nappyChangeClickE)
+        responseChangeE (-> (util/BonE nextNappyChangeRequestB nappyChangeClickE)
                             restE)]
 
     ;; setting up children menu
@@ -251,8 +213,8 @@
      "content" "beginning")
 
     ;; wiring up the response event streams to serverModelUpdatedE
-    (forwardEvents responseFeedE serverModelUpdatedE)
-    (forwardEvents responseChangeE serverModelUpdatedE)
+    (util/forwardEvents responseFeedE serverModelUpdatedE)
+    (util/forwardEvents responseChangeE serverModelUpdatedE)
 
     ;; Setting active class
 

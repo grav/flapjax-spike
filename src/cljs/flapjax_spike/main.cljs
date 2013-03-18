@@ -62,7 +62,7 @@
 (defn nappy-change-dom [{:keys [meta count timestamp] :as data}]
   (let [value (if data
                 (str "(_|_) Nappy-changed "
-                     count " times. Changed at"
+                     count " times. Changed at "
                      timestamp " by  "
                      (get meta :who) ".")
                 "No nappy-changing done. Kid might be smelly.")]
@@ -115,8 +115,7 @@
 
 (defn ^:export init
   []
-  (let [childrenE (util/restE (fj/oneE (children-request)))
-        switchChildE (fj/receiverE)
+  (let [switchChildE (fj/receiverE)
         currentChildB (fj/startsWith switchChildE nil)
 
         serverModelUpdatedE (fj/receiverE)
@@ -160,7 +159,10 @@
                             util/restE)]
 
     ;; setting up children menu
-    (fj/mapE #(set-children-menu % switchChildE) childrenE)
+    (->> (children-request)
+         fj/oneE
+         util/restE
+         (fj/mapE #(set-children-menu % switchChildE)))
 
     ;; insert content
     (fj/insertDomB contentDom "content" "beginning")

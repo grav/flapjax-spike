@@ -23,12 +23,6 @@
 
 ;; rest
 
-(defn switch-activity [main activity breast-feed nappy-change]
-  (when (= :counting main)
-    (case activity
-      :breast-feed breast-feed
-      :nappy-change nappy-change)))
-
 (defn breast-feed-url [child]
   (str "/rest/" child "/breast-feed"))
 
@@ -50,12 +44,13 @@
 (defn children-request []
   (util/rest-request "/rest/children"))
 
-(defn switch [breastFeedE nappyChangeE]
-  (fn [main activity]
-    (switch-activity main
-                     activity
-                     [breastFeedE breast-feed-request]
-                     [nappyChangeE nappy-change-request])))
+;; switching
+
+(defn switch-activity [main activity breast-feed nappy-change]
+  (when (= :counting main)
+    (case activity
+      :breast-feed breast-feed
+      :nappy-change nappy-change)))
 
 ;; dom
 
@@ -156,7 +151,7 @@
         nextNappyChangeRequestB (fj/liftB nappy-change-post-request currentChildB {:who "Mikkel"})
 
         breastFeedDomB (fj/liftB breast-feed-dom breastFeedB)
-        nappyChageDomB (fj/liftB nappy-change-dom nappyChangeB)
+        nappyChangeDomB (fj/liftB nappy-change-dom nappyChangeB)
 
         activity-elms (fj/getElementsByClass "menu-item" (util/elm "activity-menu"))
         activityE (->> activity-elms
@@ -167,6 +162,8 @@
                                         id (.-id elm)]
                                     (id activity-map)))))
         activityB (fj/startsWith activityE :breast-feed)
+
+        contentDom (fj/liftB switch-activity :counting activityB breastFeedDomB nappyChangeDomB)
 
         breastFeedClickE (fj/clicksE "breast-feed-action")
         nappyChangeClickE (fj/clicksE "nappy-change-action")
@@ -181,8 +178,7 @@
     (fj/mapE #(set-children-menu % switchChildE) childrenE)
 
     ;; insert content
-    (fj/insertDomB nappyChageDomB "content" "beginning")
-    (fj/insertDomB breastFeedDomB "content" "beginning")
+    (fj/insertDomB contentDom "content" "beginning")
     (fj/insertDomB
      (fj/liftB #(if % % "No child selected") currentChildB)
      "content" "beginning")

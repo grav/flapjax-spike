@@ -6,21 +6,6 @@
             [flapjax-spike.util :as util]
             [flapjax-spike.edn :as edn]))
 
-(def page-map
-  {"counting-link" :counting
-   "frontpage-link" :frontpage})
-
-(defn menu [items]
-  (let [menu (dom/createDom "div")]
-   (doseq [item items]
-     (let [span (dom/createDom "span")
-           a (dom/createDom "a" (clj->js {"id" (str item)
-                                          "href" "#"
-                                          "class" "menu-item"}) item)]
-       (dom/appendChild span a)
-       (dom/appendChild menu span)))
-   menu))
-
 ;; rest
 
 (defn breast-feed-url [child]

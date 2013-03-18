@@ -3,7 +3,8 @@
             [goog.dom.classes :as classes]
             [goog.dom :as dom]
             [cljs.reader :as reader]
-            [flapjax-spike.util :as util]))
+            [flapjax-spike.util :as util]
+            [flapjax-spike.edn :as edn]))
 
 (defn toElementE [eventE]
   (fj/mapE (fn [event] (.-toElement event)) eventE))
@@ -26,15 +27,15 @@
 ;; rest
 
 (defn rest-request [url]
-  (clj->js {:url url
-            :request "get"
-            :response "plain"}))
+  {:url url
+   :request "get"
+   :response "plain"})
 
 (defn post-request [url data]
-  (clj->js {:url url
-            :request "post"
-            :response "plain"
-            :body (pr-str data)}))
+  {:url url
+   :request "post"
+   :response "plain"
+   :body data})
 
 (defn switch-activity [main activity breast-feed nappy-change]
   (when (= :counting main)
@@ -42,20 +43,40 @@
       :breast-feed breast-feed
       :nappy-change nappy-change)))
 
+(defn breast-feed-url [child]
+  (str "/rest/" child "/breast-feed"))
+
+(defn nappy-change-url [child]
+  (str "/rest/" child "/nappy-change"))
 
 (defn breast-feed-request [child]
-  (rest-request (str "/rest/" child "/breast-feed"))  )
+  (rest-request (breast-feed-url child)))
 
 (defn nappy-change-request [child]
-  (rest-request (str "/rest/" child "/nappy-change"))  )
+  (rest-request (nappy-change-url child)))
+
+(defn breast-feed-post-request [child data]
+  (post-request (breast-feed-url child) data))
+
+(defn nappy-change-post-request [child data]
+  (post-request (nappy-change-url child) data))
 
 (defn children-request []
   (rest-request "/rest/children"))
 
-(defn restE [requestE]
-  (fj/mapE
-   reader/read-string
-   (fj/getWebServiceObjectE requestE)))
+(defn restE
+  "Takes an event stream of maps as defined in the Flapjax api, but body is assumed
+  to be edn data."
+  [requestE]
+  (let [responseE (fj/receiverE)
+        callback #(fj/sendEvent responseE %)]
+    (fj/mapE
+     (fn [req]
+       (case (:request req)
+         "get" (edn/get (:url req) callback)
+         "post" (edn/post (:url req) callback (:body req))))
+     requestE)
+    responseE))
 
 (defn switch [breastFeedE nappyChangeE]
   (fn [main activity]
@@ -122,7 +143,7 @@
   [s E]
   (fj/mapE
    (fn [e]
-     (.log js/console s (pr-str e))
+     (.log js/console s (pr-str e) (clj->js e))
      e)
    E))
 
@@ -211,6 +232,9 @@
         nextBreastFeedB (fj/liftB feed breastFeedB "left")
         nextNappyChangeB (fj/liftB change nappyChangeB "Mikkel")
 
+        nextBreastFeedRequestB (fj/liftB breast-feed-post-request currentChildB nextBreastFeedB)
+        nextNappyChangeRequestB (fj/liftB nappy-change-post-request currentChildB nextNappyChangeB)
+
         breastFeedDomB (fj/liftB breast-feed-dom breastFeedB)
         nappyChageDomB (fj/liftB nappy-change-dom nappyChangeB)
 
@@ -227,28 +251,31 @@
         mainB (fj/constantB :counting)
         activityB (fj/startsWith activityE :breast-feed)
 
-        childB (fj/constantB "olga")
+        breastFeedClickE (fj/clicksE "breast-feed-action")
+        nappyChangeClickE (fj/clicksE "nappy-change-action")
 
-        switchB (liftVectorB mainB activityB)
-        breastFeedE (fj/receiverE)
-        nappyChangeE (fj/receiverE)
-        switch-fn (fn [[main activity]] (switch-activity
-                                        main
-                                        activity
-                                        breastFeedE
-                                        nappyChangeE))
+        ;; stream for feeding events as restE maps
+        postFeedE (js/receiverE)
 
         ]
     ;; setting up children menu
     (fj/mapE #(set-children-menu % switchChildE) childrenE)
 
     ;; insert content
-    (fj/insertDomB breastFeedDomB "content" "beginning")
     (fj/insertDomB nappyChageDomB "content" "beginning")
+    (fj/insertDomB breastFeedDomB "content" "beginning")
+    (fj/insertDomB
+     (fj/liftB #(if % % "No child selected") currentChildB)
+     "content" "beginning")
 
     ;; update events
+    (fj/mapE (fn [_] (fj/sendEvent postFeedE (fj/valueNow nextBreastFeedRequestB))) breastFeedClickE)
 
-
+    (->> postFeedE
+         (logE "post feed")
+         restE
+         (logE "feed restE:")
+         )
 
     ;; logging
     #_(logB "currentChildB changes:" currentChildB)
@@ -259,6 +286,8 @@
     (logB "nextBreastFeedB" nextBreastFeedB)
     (logB "nextNappyChangeB" nextNappyChangeB)
 
+    (logE "postFeedE" postFeedE)
+
     ;; old
 
     (doseq [elm (fj/getElementsByClass
@@ -268,16 +297,4 @@
        (fj/liftB
         #(active-class % (util/elm-id elm))
         activityB)
-       elm "className"))
-
-    #_(fj/insertDomE
-     (fj/mergeE
-      (->> nappyChangeE
-           (fj/mapE nappy-change-request)
-           restE
-           (fj/mapE nappy-change-dom))
-      (->> breastFeedE
-          (fj/mapE breast-feed-request)
-          restE
-          (fj/mapE breast-feed-dom)))
-     "content")))
+       elm "className"))))

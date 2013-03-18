@@ -130,7 +130,7 @@
 
 (defn ^:export init
   []
-  (let [childrenE (util/restE (fj/mapE children-request))
+  (let [childrenE (util/restE (fj/oneE (children-request)))
         switchChildE (fj/receiverE)
         currentChildB (fj/startsWith switchChildE nil)
 
